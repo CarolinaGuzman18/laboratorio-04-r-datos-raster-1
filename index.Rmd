@@ -1,6 +1,6 @@
 ---
 title: "GF-0604 Procesamiento de datos geográficos<br>Laboratorio 04: R - Datos raster 1"
-author: "Manuel Vargas"
+author: "Carolina Guzmán Herrera"
 date: "2020-06-11"
 output:
   html_document:
@@ -12,32 +12,114 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(dplyr)
+library(leaflet)
 ```
 
-## Descripción general
-En este laboratorio, elaborará un mapa web con el paquete [Leaflet](https://cran.r-project.org/web/packages/leaflet/) del lenguaje de programación [R](https://www.r-project.org/), para visualizar datos ambientales y de biodiversidad. El resultado final será un documento en la sintaxis [R Markdown](https://rmarkdown.rstudio.com/), publicado en [GitHub Pages](https://pages.github.com/).
+```{r}
+## Cargar los datos de aves 
+cr_ara_ambiguus <- st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/cr-ara-ambiguus.geojson")
 
-## Fecha de entrega y entregables
-La fecha límite de entrega de este laboratorio es el **jueves 18 de junio de 2020**. **NO SE ACEPTARÁN ENTREGAS DESPUÉS DE ESA FECHA**. Debe enviarle al profesor por correo electrónico la dirección del sitio en GitHub Pages resultante.
+cr_pharomachrus_mocinno <- st_read("https://raw.githubusercontent.com/geoprocesamiento-2020i/datos/master/biodiversidad/registros-presencia/cr/cr_pharomachrus_mocinno.geojson")
 
-La tarea puede realizarse en grupos de un máximo de tres estudiantes.
+```
 
-## Trabajo previo
-Se recomienda leer el material preparado por el profesor y consultar los recursos listados en:
-
-* [Lección 10: el lenguaje de programación R - Datos raster](https://geoprocesamiento-2020i.github.io/leccion-10-r-datos-raster/).
-
-## Tareas a realizar
-Elabore un mapa web que contenga:
-
-1. (10%) Tres capas base tipo  ```Tile```.
-2. (20%) Dos capas raster: altitud y promedio de precipitación, provenientes de la base de datos [WorldClim](https://www.worldclim.org/) y recortadas para los límites de Costa Rica y en resolución de 30x30 segundos.
-3. (20%) Dos capas vectoriales correspondientes a los registros de presencia de las especies de aves [Ara ambiguus](https://github.com/geoprocesamiento-2020i/datos/blob/master/biodiversidad/registros-presencia/cr/cr-ara-ambiguus.geojson) (lapa verde) y [Pharomachrus mocinno](https://github.com/geoprocesamiento-2020i/datos/blob/master/biodiversidad/registros-presencia/cr/cr_pharomachrus_mocinno.geojson) (quetzal).
-4. (20%) Un control de capas que permita activar y desactivar todas las capas.
-5. (20%) Leyendas para las dos capas raster. Elija con cuidado las paletas de colores de ambas capas.
-6. (10%) Un control de mapa de referencia (_MiniMap_).
+```{r}
+library(raster)
+library(rgdal)
+```
 
 
 
-Los mapas deben ser implementados con el paquete ```Leaflet```.
+```{r}
+## Cargar los datos de altitud y precipitacion
+
+altitude <- getData("worldclim", var="alt", res=.5, lon=-84, lat=10)
+cr_altitude <- crop(altitude, extent(-86, -82.3, 8, 11.3))  
+
+precipitation <- getData("worldclim", var="bio", res=.5, lon=-84, lat=10)
+precipitation <- precipitation[[c(12)]]
+names(precipitation) <- c("Prec")
+cr_precipitation <- crop(precipitation, extent(-86, -82.3, 8, 11.3))
+```
+
+```{r}
+## Paletas de colores para las capas
+pal <- colorNumeric(
+  c('#7570b3', '#66a61e', '#d95f02'), 
+  values(cr_altitude), 
+  na.color = "transparent"
+)
+
+pal1 <- colorNumeric(
+  c('#377eb8', '#4daf4a', '#e41a1c'), 
+  values(cr_precipitation), 
+  na.color = "transparent"
+)
+
+# Mapa web
+m <- leaflet() %>% 
+  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>% 
+  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
+  addCircleMarkers(data = cr_ara_ambiguus,
+                   stroke = F,
+                   radius = 4,
+                   fillColor = 'green',
+                   fillOpacity = 1,
+                   group = "Ara ambiguus",
+                   popup = paste(cr_ara_ambiguus$locality, 
+                                 cr_ara_ambiguus$year, 
+                                 sep = '<br/>'
+                           )
+  ) %>%
+    addCircleMarkers(data = cr_pharomachrus_mocinno,
+                   stroke = F,
+                   radius = 4,
+                   fillColor = 'blue',
+                   fillOpacity = 1,
+                   group = "Pharamachrus Moccino",
+                   popup = paste(cr_pharomachrus_mocinno$locality, 
+                                 cr_pharomachrus_mocinno$year, 
+                                 sep = '<br/>'
+                           )
+  ) %>%
+  addRasterImage(cr_altitude,
+                 colors = pal, 
+                 opacity = 0.8, 
+                 group = "Altitud"
+                 
+) %>% 
+   addRasterImage(cr_precipitation,
+                 colors = pal1, 
+                 opacity = 0.8, 
+                 group = "Precipitacion"
+                 
+) %>%
+addLayersControl(
+    baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI"),
+    overlayGroups = c("Altitud", "Ara ambiguus","Pharamachrus Moccino", "Precipitacion"),
+    options = layersControlOptions(collapsed = FALSE)    
+  ) %>%
+  addLegend("bottomright", pal = pal,
+            values = values(cr_altitude), 
+            title = "Altitud" 
+
+   ) %>%
+  addLegend("topleft",pal = pal1, 
+            values = values(cr_precipitation), 
+            title = "Precipitacion"
+
+  ) %>%
+  addMiniMap(
+    toggleDisplay = TRUE,
+    position = "bottomleft",
+    tiles = providers$Stamen.TonerLite
+  )
+
+m
+
+```
+
+

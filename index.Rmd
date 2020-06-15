@@ -1,6 +1,6 @@
 ---
 title: "GF-0604 Procesamiento de datos geográficos<br>Laboratorio 04: R - Datos raster 1"
-author: "Carolina Guzmán Herrera"
+author: "Carolina Guzmán y Aaron Blanco"
 date: "2020-06-11"
 output:
   html_document:
@@ -47,7 +47,7 @@ cr_precipitation <- crop(precipitation, extent(-86, -82.3, 8, 11.3))
 ```{r}
 ## Paletas de colores para las capas
 pal <- colorNumeric(
-  c('#7570b3', '#66a61e', '#d95f02'), 
+  c("#0C2C84", "#41B6C4", "#FFFFCC"), 
   values(cr_altitude), 
   na.color = "transparent"
 )
@@ -99,7 +99,7 @@ m <- leaflet() %>%
 ) %>%
 addLayersControl(
     baseGroups = c("OpenStreetMap", "Stamen Toner Lite", "Imágenes de ESRI"),
-    overlayGroups = c("Altitud", "Ara ambiguus","Pharamachrus Moccino", "Precipitacion"),
+    overlayGroups = c("Altitud", "Precipitacion", "Ara ambiguus","Pharamachrus Moccino"),
     options = layersControlOptions(collapsed = FALSE)    
   ) %>%
   addLegend("bottomright", pal = pal,

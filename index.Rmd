@@ -47,7 +47,7 @@ cr_precipitation <- crop(precipitation, extent(-86, -82.3, 8, 11.3))
 ```{r}
 ## Paletas de colores para las capas
 pal <- colorNumeric(
-  c("#0C2C84", "#41B6C4", "#FFFFCC"), 
+  c('#7570b3', '#d95f02', '#1b9e77'), 
   values(cr_altitude), 
   na.color = "transparent"
 )
